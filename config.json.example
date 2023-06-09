@@ -1,0 +1,37 @@
+{
+  "appName": "BalanceHistoryService",
+  "server" : {
+    "port" : "8010"
+  },
+  "database" : {
+    "mongodb": {
+      "uri" : "mongodb-uri",
+      "dbName": "mongodb-db"
+    }
+  },
+  "kafka": {
+    "mode": "producer/consumer",
+    "brokers": "brokers:port",
+    "sasl" : {
+      "enable": true/false,
+      "algorithm" : "sha256/sha512",
+      "user" : "username",
+      "password": "password"
+    },
+    "tls" : {
+      "enable": true,
+      "insecureSkipVerify": true
+    },
+    "producer" : {
+      "idempotent" : true,
+      "retryMax" : 1
+    },
+    "consumer" : {
+      "assignor" : "roundRobin",
+      "oldest" : "true/false",
+      "verbose" : true/false,
+      "consumerGroupName" : "consumer-group-name",
+      "topics": "topic1,topic2"
+    }
+  }
+}
