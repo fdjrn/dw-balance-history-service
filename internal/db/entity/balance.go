@@ -66,6 +66,6 @@ type BalanceHistory struct {
 }
 
 const (
-	TransCodeTopup  = "1001"
-	TransCodeDeduct = "1001"
+	TransCodeTopup  = "1000"
+	TransCodeDeduct = "2000"
 )
