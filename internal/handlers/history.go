@@ -64,8 +64,8 @@ func InsertDeductHistory(message *sarama.ConsumerMessage) (*entity.BalanceHistor
 	history.MerchantID = "10000"
 	history.InvoiceNumber = data.InvoiceNumber
 	history.ReceiptNumber = data.ReceiptNumber
-	history.Debit = 0
-	history.Credit = data.Amount
+	history.Debit = data.Amount
+	history.Credit = 0
 	history.Balance = data.LastBalance
 	history.CreatedAt = time.Now().UnixMilli()
 	history.UpdatedAt = time.Now().UnixMilli()
@@ -112,8 +112,8 @@ func InsertTopUpHistory(message *sarama.ConsumerMessage) (*entity.BalanceHistory
 	history.MerchantID = "10000"
 	history.InvoiceNumber = data.ExRefNumber
 	history.ReceiptNumber = data.ReceiptNumber
-	history.Debit = data.Amount
-	history.Credit = 0
+	history.Debit = 0
+	history.Credit = data.Amount
 	history.Balance = data.LastBalance
 	history.CreatedAt = time.Now().UnixMilli()
 	history.UpdatedAt = time.Now().UnixMilli()
