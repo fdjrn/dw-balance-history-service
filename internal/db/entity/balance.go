@@ -57,7 +57,6 @@ type BalanceHistory struct {
 	MerchantID    string `json:"merchantID" bson:"merchantId"`
 	InvoiceNumber string `json:"invoiceNumber" bson:"invoiceNumber"`
 	ReceiptNumber string `json:"receiptNumber" bson:"receiptNumber"`
-	Amount        int    `json:"amount" bson:"-"`
 	Debit         int    `json:"debit" bson:"debit"`
 	Credit        int    `json:"credit" bson:"credit"`
 	Balance       int64  `json:"balance" bson:"balance"`
