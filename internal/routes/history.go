@@ -12,6 +12,10 @@ func initBalanceHistoryRoutes(router fiber.Router) {
 		return handlers.GetHistoryByLastTransaction(c)
 	})
 
+	r.Post("/periods", func(c *fiber.Ctx) error {
+		return handlers.GetHistoryByPeriod(c)
+	})
+
 	// balance transaction
 	// ---------------------------------------------------------------
 	//r.Post("/topup", func(c *fiber.Ctx) error {

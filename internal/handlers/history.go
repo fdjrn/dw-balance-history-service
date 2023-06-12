@@ -2,11 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/fdjrn/dw-balance-history-service/internal/db/entity"
 	"github.com/fdjrn/dw-balance-history-service/internal/db/repository"
 	"github.com/fdjrn/dw-balance-history-service/pkg/payload"
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/mongo"
 	"log"
 	"time"
 )
@@ -23,13 +26,33 @@ func isValidLimit(i int64) bool {
 	return false
 }
 
-func InsertDeductHistory(message *sarama.ConsumerMessage) error {
+func isValidPeriod(r payload.HistoryRequestPeriod) bool {
+	if r.Year == 0 {
+		return false
+	}
+
+	if r.Month == 0 || r.Month > 12 {
+		return false
+	}
+
+	return true
+}
+
+func InsertDeductHistory(message *sarama.ConsumerMessage) (*entity.BalanceHistory, error) {
 	data := new(entity.BalanceDeduction)
 
 	err := json.Unmarshal(message.Value, &data)
 	if err != nil {
 		log.Println(err.Error())
-		return err
+		return nil, err
+	}
+
+	// check for duplicate insert
+	if repository.BalanceHistoryRepository.IsExists(data.ReceiptNumber) {
+		return nil, errors.New(
+			fmt.Sprintf("transaction with receipt number %s, already exists. insert document skipped...",
+				data.ReceiptNumber),
+		)
 	}
 
 	history := new(entity.BalanceHistory)
@@ -47,21 +70,37 @@ func InsertDeductHistory(message *sarama.ConsumerMessage) error {
 	history.CreatedAt = time.Now().UnixMilli()
 	history.UpdatedAt = time.Now().UnixMilli()
 
-	_, _, err = repository.BalanceHistoryRepository.InsertBalanceHistory(history)
+	_, insertedId, err := repository.BalanceHistoryRepository.InsertBalanceHistory(history)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	// fetch inserted document
+	doc, err := repository.BalanceHistoryRepository.FindByID(insertedId)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, errors.New("cannot fetch inserted document, or its empty")
+		}
+		return nil, err
+	}
+
+	return doc, nil
 }
 
-func InsertTopUpHistory(message *sarama.ConsumerMessage) error {
+func InsertTopUpHistory(message *sarama.ConsumerMessage) (*entity.BalanceHistory, error) {
 	data := new(entity.BalanceTopUp)
 
 	err := json.Unmarshal(message.Value, &data)
 	if err != nil {
-		log.Println(err.Error())
-		return err
+		return nil, err
+	}
+
+	// check for duplicate insert
+	if repository.BalanceHistoryRepository.IsExists(data.ReceiptNumber) {
+		return nil, errors.New(
+			fmt.Sprintf("transaction with receipt number %s, already exists. insert document skipped...",
+				data.ReceiptNumber),
+		)
 	}
 
 	history := new(entity.BalanceHistory)
@@ -79,12 +118,21 @@ func InsertTopUpHistory(message *sarama.ConsumerMessage) error {
 	history.CreatedAt = time.Now().UnixMilli()
 	history.UpdatedAt = time.Now().UnixMilli()
 
-	_, _, err = repository.BalanceHistoryRepository.InsertBalanceHistory(history)
+	_, insertedId, err := repository.BalanceHistoryRepository.InsertBalanceHistory(history)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	// fetch inserted document
+	doc, err := repository.BalanceHistoryRepository.FindByID(insertedId)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, errors.New("cannot fetch inserted document, or its empty")
+		}
+		return nil, err
+	}
+
+	return doc, nil
 }
 
 func GetHistoryByLastTransaction(c *fiber.Ctx) error {
@@ -96,7 +144,10 @@ func GetHistoryByLastTransaction(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(ResponsePayload{
 			Success: false,
 			Message: err.Error(),
-			Data:    nil,
+			Data: ResponsePayloadData{
+				Total:  0,
+				Result: nil,
+			},
 		})
 	}
 
@@ -105,33 +156,93 @@ func GetHistoryByLastTransaction(c *fiber.Ctx) error {
 		return c.Status(400).JSON(ResponsePayload{
 			Success: false,
 			Message: "valid limit value are 5, 10, 20, 50",
-			Data:    nil,
+			Data: ResponsePayloadData{
+				Total:  0,
+				Result: nil,
+			},
 		})
 	}
 
-	code, histories, err := repository.BalanceHistoryRepository.FindByLastTransaction(request)
+	code, histories, length, err := repository.BalanceHistoryRepository.FindByLastTransaction(request)
 	if err != nil {
 		return c.Status(code).JSON(ResponsePayload{
 			Success: false,
 			Message: err.Error(),
-			Data:    nil,
+			Data: ResponsePayloadData{
+				Total:  length,
+				Result: histories,
+			},
 		})
 	}
 
-	if len(histories.([]entity.BalanceHistory)) == 0 {
+	if length == 0 {
 		return c.Status(fiber.StatusOK).JSON(ResponsePayload{
 			Success: true,
 			Message: "no document found or its empty",
-			Data:    histories,
+			Data: ResponsePayloadData{
+				Total:  0,
+				Result: histories,
+			},
 		})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(ResponsePayload{
 		Success: true,
 		Message: "balance histories fetched successfully",
-		Data:    histories,
+		Data: ResponsePayloadData{
+			Total:  length,
+			Result: histories,
+		},
 	})
 
+}
+
+func GetHistoryByPeriod(c *fiber.Ctx) error {
+	var request = new(payload.HistoryRequest)
+
+	// parse body payload
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ResponsePayload{
+			Success: false,
+			Message: err.Error(),
+			Data: ResponsePayloadData{
+				Total:  0,
+				Result: nil,
+			},
+		})
+	}
+
+	if !isValidPeriod(request.Period) {
+		return c.Status(fiber.StatusBadRequest).JSON(ResponsePayload{
+			Success: false,
+			Message: "invalid period",
+			Data: ResponsePayloadData{
+				Total:  0,
+				Result: nil,
+			},
+		})
+	}
+
+	code, histories, length, err := repository.BalanceHistoryRepository.FindByPeriod(request)
+	if err != nil {
+		return c.Status(code).JSON(ResponsePayload{
+			Success: false,
+			Message: err.Error(),
+			Data: ResponsePayloadData{
+				Total:  length,
+				Result: histories,
+			},
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(ResponsePayload{
+		Success: true,
+		Message: "balance histories fetched successfully",
+		Data: ResponsePayloadData{
+			Total:  length,
+			Result: histories,
+		},
+	})
 }
 
 //

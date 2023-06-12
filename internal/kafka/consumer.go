@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	"github.com/fdjrn/dw-balance-history-service/configs"
+	"github.com/fdjrn/dw-balance-history-service/internal/db/entity"
 	"github.com/fdjrn/dw-balance-history-service/internal/handlers"
 	"log"
 	"os"
@@ -131,22 +132,28 @@ func StartConsumer() {
 
 func HandleMessages(message *sarama.ConsumerMessage) {
 
+	var history = new(entity.BalanceHistory)
+	var err error
+
 	switch message.Topic {
 	case DeductTopic:
-		err := handlers.InsertDeductHistory(message)
+		history, err = handlers.InsertDeductHistory(message)
 		if err != nil {
 			Logger.Println("failed to create deduct transaction history: ", err.Error())
 			return
 		}
-		Logger.Println("deduct transaction history successfully created")
+		Logger.Printf("deduct transaction history with receipt number %s , has been created successfully\n",
+			history.ReceiptNumber)
 
 	case TopUpTopic:
-		err := handlers.InsertTopUpHistory(message)
+		history, err = handlers.InsertTopUpHistory(message)
 		if err != nil {
 			Logger.Println("failed to create topup history: ", err.Error())
 			return
 		}
-		Logger.Println("topup history successfully created")
+
+		Logger.Printf("topup transaction history with receipt number %s , has been created successfully\n",
+			history.ReceiptNumber)
 
 	default:
 		Logger.Println("Unknown topic message")
