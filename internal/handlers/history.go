@@ -212,6 +212,17 @@ func GetHistoryByPeriod(c *fiber.Ctx) error {
 		})
 	}
 
+	if request.UID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(ResponsePayload{
+			Success: false,
+			Message: "uniqueId cannot be empty",
+			Data: ResponsePayloadData{
+				Total:  0,
+				Result: nil,
+			},
+		})
+	}
+
 	if !isValidPeriod(request.Period) {
 		return c.Status(fiber.StatusBadRequest).JSON(ResponsePayload{
 			Success: false,
