@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"github.com/fdjrn/dw-balance-history-service/internal/db"
 	"github.com/fdjrn/dw-balance-history-service/internal/db/entity"
 	"github.com/fdjrn/dw-balance-history-service/pkg/payload"
@@ -10,6 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
+	"math"
+	"time"
 )
 
 type BalanceHistory struct {
@@ -147,4 +150,54 @@ func (h *BalanceHistory) FindByPeriod(r *payload.HistoryRequest) (int, interface
 	}
 
 	return fiber.StatusOK, histories, len(histories), nil
+}
+
+/*
+FindAllPaginated
+function args:
+
+	*payload.HistoryRequestPaginated
+
+return:
+
+	code int,
+	data interfaces{},
+	totalDocument int64,
+	totalPages int,
+	err error
+*/
+func (h *BalanceHistory) FindAllPaginated(r *payload.HistoryRequestPaginated) (int, interface{}, int64, int64, error) {
+
+	filter := bson.D{{"uniqueId", r.UID}}
+	skipValue := (r.Page - 1) * r.Size
+
+	ctx, cancel := context.WithTimeout(context.TODO(), 500*time.Millisecond)
+	defer cancel()
+
+	cursor, err := db.Mongo.Collection.BalanceHistory.Find(
+		ctx,
+		filter,
+		options.Find().
+			SetSort(bson.D{{"_id", -1}}).
+			SetSkip(skipValue).
+			SetLimit(r.Size),
+	)
+
+	if err != nil {
+		return fiber.StatusInternalServerError, nil, 0, 0, err
+	}
+
+	totalDocs, _ := db.Mongo.Collection.BalanceHistory.CountDocuments(ctx, filter)
+	var histories []entity.BalanceHistory
+	if err = cursor.All(context.TODO(), &histories); err != nil {
+		return fiber.StatusInternalServerError, nil, 0, 0, err
+	}
+
+	if len(histories) == 0 {
+		return fiber.StatusInternalServerError, nil, 0, 0, errors.New("empty results or last pages has been reached")
+	}
+
+	totalPages := math.Ceil(float64(totalDocs) / float64(r.Size))
+
+	return fiber.StatusOK, &histories, totalDocs, int64(totalPages), nil
 }

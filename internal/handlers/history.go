@@ -197,6 +197,51 @@ func GetHistoryByLastTransaction(c *fiber.Ctx) error {
 
 }
 
+func GetHistoryWithPagination(c *fiber.Ctx) error {
+
+	var request = new(payload.HistoryRequestPaginated)
+
+	// parse body payload
+	if err := c.BodyParser(request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ResponsePayloadPaginated{
+			Success: false,
+			Message: err.Error(),
+			Data:    ResponsePayloadDataPaginated{},
+		})
+	}
+
+	// check uniqueId parameter is not empty
+	if request.UID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(ResponsePayloadPaginated{
+			Success: false,
+			Message: "uniqueId cannot be empty",
+			Data:    ResponsePayloadDataPaginated{},
+		})
+	}
+
+	code, histories, total, pages, err := repository.BalanceHistoryRepository.FindAllPaginated(request)
+	if err != nil {
+		return c.Status(code).JSON(ResponsePayloadPaginated{
+			Success: false,
+			Message: err.Error(),
+			Data:    ResponsePayloadDataPaginated{},
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(ResponsePayloadPaginated{
+		Success: true,
+		Message: "balance histories fetched successfully",
+		Data: ResponsePayloadDataPaginated{
+			Result:      histories,
+			Total:       total,
+			PerPage:     request.Size,
+			CurrentPage: request.Page,
+			LastPage:    pages,
+		},
+	})
+
+}
+
 func GetHistoryByPeriod(c *fiber.Ctx) error {
 	var request = new(payload.HistoryRequest)
 

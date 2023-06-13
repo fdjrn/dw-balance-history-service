@@ -12,10 +12,10 @@ import (
 )
 
 type MongoCollection struct {
-	Account           *mongo.Collection
-	UnregisterAccount *mongo.Collection
-	BalanceTopup      *mongo.Collection
-	BalanceHistory    *mongo.Collection
+	//Account           *mongo.Collection
+	//UnregisterAccount *mongo.Collection
+	//BalanceTopup      *mongo.Collection
+	BalanceHistory *mongo.Collection
 }
 
 type MongoInstance struct {

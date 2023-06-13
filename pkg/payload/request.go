@@ -10,3 +10,9 @@ type HistoryRequestPeriod struct {
 	Year  int `json:"year"`
 	Month int `json:"month"`
 }
+
+type HistoryRequestPaginated struct {
+	UID  string `json:"uniqueId"`
+	Page int64  `json:"page,omitempty"`
+	Size int64  `json:"size,omitempty"`
+}
