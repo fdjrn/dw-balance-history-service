@@ -7,18 +7,18 @@ import (
 
 func initBalanceHistoryRoutes(router fiber.Router) {
 	historyHandler := handlers.NewBalanceHistoryHandler()
-	historyRoute := router.Group("/account/balance/history")
+	historyRoute := router.Group("/account/transaction/history")
 
-	//r.Post("/last-transaction", func(c *fiber.Ctx) error {
-	//	return handlers.GetHistoryByLastTransaction(c)
-	//})
+	historyRoute.Post("/last-transaction", func(c *fiber.Ctx) error {
+		return historyHandler.GetLastTransaction(c)
+	})
 
 	historyRoute.Post("/all", func(c *fiber.Ctx) error {
 		return historyHandler.GetBalanceHistories(c)
 	})
 
-	//r.Post("/periods", func(c *fiber.Ctx) error {
-	//	return handlers.GetHistoryByPeriod(c)
-	//})
+	historyRoute.Post("/periods", func(c *fiber.Ctx) error {
+		return historyHandler.GetBalanceHistories(c)
+	})
 
 }

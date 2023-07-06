@@ -25,6 +25,7 @@ type PaginatedRequest struct {
 	MerchantID string         `json:"merchantID"`
 	TerminalID string         `json:"terminalId,omitempty"`
 	Periods    PeriodsRequest `json:"periods,omitempty"`
-	Page       int64          `json:"page"`
-	Size       int64          `json:"size"`
+	Page       int64          `json:"page,omitempty"`
+	Size       int64          `json:"size,omitempty"`
+	Limit      int64          `json:"limit,omitempty"`
 }

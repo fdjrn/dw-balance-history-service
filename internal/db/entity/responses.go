@@ -3,6 +3,7 @@ package entity
 type Responses struct {
 	Success bool        `json:"success"`
 	Message string      `json:"message"`
+	Total   int         `json:"total,omitempty"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
@@ -19,13 +20,13 @@ type PaginationInfo struct {
 }
 
 type PaginatedDetailResponse struct {
-	Total      int64          `json:"total,omitempty"`
-	Result     interface{}    `json:"results,omitempty"`
-	Pagination PaginationInfo `json:"pagination,omitempty"`
+	Total      int64           `json:"total,omitempty"`
+	Result     interface{}     `json:"results,omitempty"`
+	Pagination *PaginationInfo `json:"pagination,omitempty"`
 }
 
 type PaginatedResponse struct {
-	Success bool                    `json:"success"`
-	Message string                  `json:"message"`
-	Data    PaginatedDetailResponse `json:"data,omitempty"`
+	Success bool                     `json:"success"`
+	Message string                   `json:"message"`
+	Data    *PaginatedDetailResponse `json:"data,omitempty"`
 }

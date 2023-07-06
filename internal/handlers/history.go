@@ -39,103 +39,6 @@ func (b *BalanceHistoryHandler) isValidLimit(i int64) bool {
 //	return true
 //}
 
-//func InsertDeductHistory(message *sarama.ConsumerMessage) (*entity.BalanceHistory, error) {
-//	data := new(entity.BalanceDeduction)
-//
-//	err := json.Unmarshal(message.Value, &data)
-//	if err != nil {
-//		log.Println(err.Error())
-//		return nil, err
-//	}
-//
-//	// check for duplicate insert
-//	if repository.BalanceHistoryRepository.IsExists(data.ReceiptNumber) {
-//		return nil, errors.New(
-//			fmt.Sprintf("transaction with receipt number %s, already exists. insert document skipped...",
-//				data.ReceiptNumber),
-//		)
-//	}
-//
-//	history := new(entity.BalanceHistory)
-//	history.ID = ""
-//	history.UniqueID = data.UniqueID
-//	history.TransDate = time.Now().UnixMilli()
-//	history.TransCode = utilities.TransCodeDeduct
-//	history.Description = data.Description
-//	history.MerchantID = "10000"
-//	history.InvoiceNumber = data.InvoiceNumber
-//	history.ReceiptNumber = data.ReceiptNumber
-//	history.Debit = data.Amount
-//	history.Credit = 0
-//	history.Balance = data.LastBalance
-//	history.CreatedAt = time.Now().UnixMilli()
-//	history.UpdatedAt = time.Now().UnixMilli()
-//
-//	_, insertedId, err := repository.BalanceHistoryRepository.InsertBalanceHistory(history)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	// fetch inserted document
-//	doc, err := repository.BalanceHistoryRepository.FindByID(insertedId)
-//	if err != nil {
-//		if err == mongo.ErrNoDocuments {
-//			return nil, errors.New("cannot fetch inserted document, or its empty")
-//		}
-//		return nil, err
-//	}
-//
-//	return doc, nil
-//}
-
-//func InsertTopUpHistory(message *sarama.ConsumerMessage) (*entity.BalanceHistory, error) {
-//	data := new(entity.BalanceTopUp)
-//
-//	err := json.Unmarshal(message.Value, &data)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	// check for duplicate insert
-//	if repository.BalanceHistoryRepository.IsExists(data.ReceiptNumber) {
-//		return nil, errors.New(
-//			fmt.Sprintf("transaction with receipt number %s, already exists. insert document skipped...",
-//				data.ReceiptNumber),
-//		)
-//	}
-//
-//	history := new(entity.BalanceHistory)
-//	history.ID = ""
-//	history.UniqueID = data.UniqueID
-//	history.TransDate = time.Now().UnixMilli()
-//	history.TransCode = utilities.TransCodeTopup
-//	history.Description = "Pembelian Voucher (Topup Saldo)"
-//	history.MerchantID = "10000"
-//	history.InvoiceNumber = data.ExRefNumber
-//	history.ReceiptNumber = data.ReceiptNumber
-//	history.Debit = 0
-//	history.Credit = data.Amount
-//	history.Balance = data.LastBalance
-//	history.CreatedAt = time.Now().UnixMilli()
-//	history.UpdatedAt = time.Now().UnixMilli()
-//
-//	_, insertedId, err := repository.BalanceHistoryRepository.InsertBalanceHistory(history)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	// fetch inserted document
-//	doc, err := repository.BalanceHistoryRepository.FindByID(insertedId)
-//	if err != nil {
-//		if err == mongo.ErrNoDocuments {
-//			return nil, errors.New("cannot fetch inserted document, or its empty")
-//		}
-//		return nil, err
-//	}
-//
-//	return doc, nil
-//}
-
 //func GetHistoryByLastTransaction(c *fiber.Ctx) error {
 //
 //	var request = new(HistoryRequest)
@@ -197,20 +100,13 @@ func (b *BalanceHistoryHandler) isValidLimit(i int64) bool {
 //	})
 //
 //}
-//
-//func (b *BalanceHistoryHandler) isValidRequest(request *PaginatedRequest) bool {
-//	if request.PartnerID == "" {
-//
-//	}
-//	return true
-//}
 
 func (b *BalanceHistoryHandler) GetBalanceHistories(c *fiber.Ctx) error {
 
-	var request = new(entity.PaginatedRequest)
+	var payload = new(entity.PaginatedRequest)
 
 	// parse body payload
-	if err := c.BodyParser(request); err != nil {
+	if err := c.BodyParser(payload); err != nil {
 		return c.Status(400).JSON(entity.Responses{
 			Success: false,
 			Message: err.Error(),
@@ -218,7 +114,7 @@ func (b *BalanceHistoryHandler) GetBalanceHistories(c *fiber.Ctx) error {
 		})
 	}
 
-	validation, err := validator.ValidateRequest(request)
+	validation, err := validator.ValidateRequest(payload)
 	if err != nil {
 		return c.Status(400).JSON(entity.Responses{
 			Success: false,
@@ -230,38 +126,82 @@ func (b *BalanceHistoryHandler) GetBalanceHistories(c *fiber.Ctx) error {
 	}
 
 	// set default param value
-	if request.Page == 0 {
-		request.Page = 1
+	if payload.Page == 0 {
+		payload.Page = 1
 	}
 
-	if request.Size == 0 {
-		request.Size = 10
+	if payload.Size == 0 {
+		payload.Size = 10
 	}
 
-	b.repository.Pagination = request
+	b.repository.Request = payload
 	histories, total, pages, err := b.repository.FindAllPaginated()
 	if err != nil {
 		return c.Status(500).JSON(entity.PaginatedResponse{
 			Success: false,
 			Message: err.Error(),
-			Data:    entity.PaginatedDetailResponse{},
+			Data:    nil,
 		})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(entity.PaginatedResponse{
 		Success: true,
-		Message: "balance histories fetched successfully",
-		Data: entity.PaginatedDetailResponse{
+		Message: "transaction histories fetched successfully",
+		Data: &entity.PaginatedDetailResponse{
 			Result: histories,
 			Total:  total,
-			Pagination: entity.PaginationInfo{
-				PerPage:     request.Size,
-				CurrentPage: request.Page,
+			Pagination: &entity.PaginationInfo{
+				PerPage:     payload.Size,
+				CurrentPage: payload.Page,
 				LastPage:    pages,
 			},
 		},
 	})
 
+}
+
+func (b *BalanceHistoryHandler) GetLastTransaction(c *fiber.Ctx) error {
+	var payload = new(entity.PaginatedRequest)
+
+	// parse body payload
+	if err := c.BodyParser(payload); err != nil {
+		return c.Status(400).JSON(entity.Responses{
+			Success: false,
+			Message: err.Error(),
+			Data:    nil,
+		})
+	}
+
+	// check limits parameter
+	if !b.isValidLimit(payload.Limit) {
+		return c.Status(400).JSON(entity.Responses{
+			Success: false,
+			Message: "valid limit value are 5, 10, 20, 50",
+			Data:    nil,
+		})
+	}
+
+	b.repository.Request = payload
+	histories, totalDocs, err := b.repository.FindByLastTransaction()
+	if err != nil {
+		return c.Status(500).JSON(entity.PaginatedResponse{
+			Success: false,
+			Message: err.Error(),
+			//Total:   0,
+			Data: nil,
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(entity.PaginatedResponse{
+		Success: true,
+		Message: "last transaction fetched successfully",
+		//Total:   totalDocs,
+		Data: &entity.PaginatedDetailResponse{
+			Total:      int64(totalDocs),
+			Result:     histories,
+			Pagination: nil,
+		},
+	})
 }
 
 //func GetHistoryByPeriod(c *fiber.Ctx) error {
