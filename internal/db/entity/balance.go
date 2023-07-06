@@ -50,7 +50,6 @@ type BalanceDeduction struct {
 
 type BalanceHistory struct {
 	ID               string `json:"accountId,omitempty" bson:"_id,omitempty"`
-	UniqueID         string `json:"uniqueId," bson:"uniqueId,omitempty"`
 	TransDate        string `json:"transDate" bson:"transDate"`
 	TransCode        string `json:"transCode" bson:"transCode"`
 	TransType        int    `json:"transType" bson:"transType"`

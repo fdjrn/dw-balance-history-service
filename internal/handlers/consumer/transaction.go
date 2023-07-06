@@ -39,7 +39,6 @@ func (h *TransactionHandler) DoHandleTransaction(message *sarama.ConsumerMessage
 	}
 	// populate transaction data
 	h.repository.Entity.ID = ""
-	h.repository.Entity.UniqueID = ""
 
 	td, err := time.Parse("20060102150405", data.TransDate)
 	h.repository.Entity.TransDate = td.Format("2006-01-02 15:04:05")

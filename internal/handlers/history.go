@@ -1,6 +1,21 @@
 package handlers
 
-func isValidLimit(i int64) bool {
+import (
+	"github.com/fdjrn/dw-balance-history-service/internal/db/entity"
+	"github.com/fdjrn/dw-balance-history-service/internal/db/repository"
+	"github.com/fdjrn/dw-balance-history-service/internal/handlers/validator"
+	"github.com/gofiber/fiber/v2"
+)
+
+type BalanceHistoryHandler struct {
+	repository repository.BalanceHistoryRepository
+}
+
+func NewBalanceHistoryHandler() BalanceHistoryHandler {
+	return BalanceHistoryHandler{repository: repository.NewBalanceHistoryRepository()}
+}
+
+func (b *BalanceHistoryHandler) isValidLimit(i int64) bool {
 	// 5, 10, 20, 50
 	limits := []int64{5, 10, 20, 50}
 	for _, v := range limits {
@@ -12,17 +27,17 @@ func isValidLimit(i int64) bool {
 	return false
 }
 
-func isValidPeriod(r HistoryRequestPeriod) bool {
-	if r.Year == 0 {
-		return false
-	}
-
-	if r.Month == 0 || r.Month > 12 {
-		return false
-	}
-
-	return true
-}
+//func isValidPeriod(r HistoryRequestPeriod) bool {
+//	if r.Year == 0 {
+//		return false
+//	}
+//
+//	if r.Month == 0 || r.Month > 12 {
+//		return false
+//	}
+//
+//	return true
+//}
 
 //func InsertDeductHistory(message *sarama.ConsumerMessage) (*entity.BalanceHistory, error) {
 //	data := new(entity.BalanceDeduction)
@@ -182,51 +197,72 @@ func isValidPeriod(r HistoryRequestPeriod) bool {
 //	})
 //
 //}
-
-//func GetHistoryWithPagination(c *fiber.Ctx) error {
 //
-//	var request = new(HistoryRequestPaginated)
+//func (b *BalanceHistoryHandler) isValidRequest(request *PaginatedRequest) bool {
+//	if request.PartnerID == "" {
 //
-//	// parse body payload
-//	if err := c.BodyParser(request); err != nil {
-//		return c.Status(fiber.StatusBadRequest).JSON(ResponsePayloadPaginated{
-//			Success: false,
-//			Message: err.Error(),
-//			Data:    ResponsePayloadDataPaginated{},
-//		})
 //	}
-//
-//	// check uniqueId parameter is not empty
-//	if request.UID == "" {
-//		return c.Status(fiber.StatusBadRequest).JSON(ResponsePayloadPaginated{
-//			Success: false,
-//			Message: "uniqueId cannot be empty",
-//			Data:    ResponsePayloadDataPaginated{},
-//		})
-//	}
-//
-//	code, histories, total, pages, err := repository.BalanceHistoryRepository.FindAllPaginated(request)
-//	if err != nil {
-//		return c.Status(code).JSON(ResponsePayloadPaginated{
-//			Success: false,
-//			Message: err.Error(),
-//			Data:    ResponsePayloadDataPaginated{},
-//		})
-//	}
-//
-//	return c.Status(fiber.StatusOK).JSON(ResponsePayloadPaginated{
-//		Success: true,
-//		Message: "balance histories fetched successfully",
-//		Data: ResponsePayloadDataPaginated{
-//			Result:      histories,
-//			Total:       total,
-//			PerPage:     request.Size,
-//			CurrentPage: request.Page,
-//			LastPage:    pages,
-//		},
-//	})
-//
+//	return true
 //}
+
+func (b *BalanceHistoryHandler) GetBalanceHistories(c *fiber.Ctx) error {
+
+	var request = new(entity.PaginatedRequest)
+
+	// parse body payload
+	if err := c.BodyParser(request); err != nil {
+		return c.Status(400).JSON(entity.Responses{
+			Success: false,
+			Message: err.Error(),
+			Data:    nil,
+		})
+	}
+
+	validation, err := validator.ValidateRequest(request)
+	if err != nil {
+		return c.Status(400).JSON(entity.Responses{
+			Success: false,
+			Message: err.Error(),
+			Data: map[string]interface{}{
+				"errors": validation,
+			},
+		})
+	}
+
+	// set default param value
+	if request.Page == 0 {
+		request.Page = 1
+	}
+
+	if request.Size == 0 {
+		request.Size = 10
+	}
+
+	b.repository.Pagination = request
+	histories, total, pages, err := b.repository.FindAllPaginated()
+	if err != nil {
+		return c.Status(500).JSON(entity.PaginatedResponse{
+			Success: false,
+			Message: err.Error(),
+			Data:    entity.PaginatedDetailResponse{},
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(entity.PaginatedResponse{
+		Success: true,
+		Message: "balance histories fetched successfully",
+		Data: entity.PaginatedDetailResponse{
+			Result: histories,
+			Total:  total,
+			Pagination: entity.PaginationInfo{
+				PerPage:     request.Size,
+				CurrentPage: request.Page,
+				LastPage:    pages,
+			},
+		},
+	})
+
+}
 
 //func GetHistoryByPeriod(c *fiber.Ctx) error {
 //	var request = new(HistoryRequest)
