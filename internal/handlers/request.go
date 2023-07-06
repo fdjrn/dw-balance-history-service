@@ -1,4 +1,4 @@
-package payload
+package handlers
 
 type HistoryRequest struct {
 	UID    string               `json:"uniqueId"`

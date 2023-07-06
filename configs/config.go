@@ -1,8 +1,10 @@
 package configs
 
 import (
+	"github.com/fdjrn/dw-balance-history-service/internal/utilities"
 	"github.com/spf13/viper"
 	"log"
+	"strings"
 )
 
 type ServerConfig struct {
@@ -55,16 +57,20 @@ type KafkaConfig struct {
 }
 
 type AppConfig struct {
-	AppName   string       `mapstructure:"appName"`
-	APIServer ServerConfig `mapstructure:"server"`
-	Database  DBConfig     `mapstructure:"database"`
-	Kafka     KafkaConfig  `mapstructure:"kafka"`
+	AppName   string `mapstructure:"appName"`
+	DebugMode bool   `mapstructure:"debugMode"`
+	// os | file
+	LogOutput          string       `mapstructure:"logOutput"`
+	LogPath            string       `mapstructure:"logPath"`
+	VerboseAPIResponse bool         `mapstructure:"verboseApiResponse"`
+	APIServer          ServerConfig `mapstructure:"server"`
+	Database           DBConfig     `mapstructure:"database"`
+	Kafka              KafkaConfig  `mapstructure:"kafka"`
 }
 
 var MainConfig AppConfig
 
 func Initialize() error {
-	//log.Println("[CONFIG] trying to load configuration file")
 	viper.SetConfigType("json")
 	viper.AddConfigPath("./")
 	viper.SetConfigName("config")
@@ -78,6 +84,19 @@ func Initialize() error {
 		return err
 	}
 
-	log.Println("[INIT] configuration >> loaded")
+	err = (&utilities.AppLogger{
+		LogPath:     MainConfig.LogPath,
+		CompressLog: true,
+		DailyRotate: true,
+	}).SetAppLogger()
+
+	if err != nil {
+		log.Fatalln("Logger error: ", err.Error())
+		return err
+	}
+
+	utilities.Log.SetPrefix("[INIT-APP] ")
+	utilities.Log.Println(strings.Repeat("-", 40))
+	utilities.Log.Println("| configuration >> loaded")
 	return nil
 }

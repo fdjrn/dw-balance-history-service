@@ -5,9 +5,11 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/fdjrn/dw-balance-history-service/configs"
 	"github.com/fdjrn/dw-balance-history-service/internal/db/entity"
-	"github.com/fdjrn/dw-balance-history-service/internal/handlers"
+	"github.com/fdjrn/dw-balance-history-service/internal/handlers/consumer"
+	"github.com/fdjrn/dw-balance-history-service/internal/kafka/topic"
+	"github.com/fdjrn/dw-balance-history-service/internal/utilities"
 	"log"
-	"os"
+	//"os"
 	"strings"
 	"sync"
 )
@@ -16,12 +18,12 @@ type MessageConsumer struct {
 	ready chan bool
 }
 
-var Logger = log.New(os.Stdout, "[CONSUMER] ", log.LstdFlags)
-
-const (
-	DeductTopic = "mdw.transaction.deduct.created"
-	TopUpTopic  = "mdw.transaction.topup.created"
-)
+//var Logger = log.New(os.Stdout, "[CONSUMER] ", log.LstdFlags)
+//
+//const (
+//	DeductTopic = "mdw.transaction.deduct.created"
+//	TopUpTopic  = "mdw.transaction.topup.created"
+//)
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 func (consumer *MessageConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
@@ -81,7 +83,7 @@ func initConsumer() (sarama.ConsumerGroup, MessageConsumer, error) {
 	/**
 	 * Set up a new Sarama consumer group
 	 */
-	consumer := MessageConsumer{
+	c := MessageConsumer{
 		ready: make(chan bool),
 	}
 
@@ -91,7 +93,7 @@ func initConsumer() (sarama.ConsumerGroup, MessageConsumer, error) {
 		log.Panicf("Error creating consumer group client: %v", err)
 	}
 
-	return client, consumer, err
+	return client, c, err
 
 }
 
@@ -99,7 +101,7 @@ func StartConsumer() {
 
 	var err error
 
-	client, consumer, err := initConsumer()
+	client, subscriber, err := initConsumer()
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -112,7 +114,7 @@ func StartConsumer() {
 		defer wg.Done()
 		for {
 
-			if err = client.Consume(context.Background(), topicMsg, &consumer); err != nil {
+			if err = client.Consume(context.Background(), topicMsg, &subscriber); err != nil {
 				log.Panicf("Error from consumer: %v", err)
 			}
 
@@ -120,44 +122,46 @@ func StartConsumer() {
 			//if ctx.Err() != nil {
 			//	return
 			//}
-			consumer.ready = make(chan bool)
+			subscriber.ready = make(chan bool)
 		}
 	}()
 	// wait till the consumer has been set up
-	<-consumer.ready
+	<-subscriber.ready
 
-	log.Println("[INIT] consumer >> up and running!...")
+	utilities.Log.Println("| consumer >> up and running!...")
 	wg.Done()
 }
 
 func HandleMessages(message *sarama.ConsumerMessage) {
+	var (
+		handler = consumer.NewTransactionHandler()
+		history = new(entity.BalanceHistory)
+		err     error
+	)
 
-	var history = new(entity.BalanceHistory)
-	var err error
+	utilities.Log.SetPrefix("[CONSUMER] ")
 
 	switch message.Topic {
-	case DeductTopic:
-		history, err = handlers.InsertDeductHistory(message)
+	case topic.DeductResult:
+		history, err = handler.DoHandleTransaction(message)
 		if err != nil {
-			Logger.Println("failed to create deduct transaction history: ", err.Error())
-			return
-		}
-		Logger.Printf("deduct transaction history with receipt number %s , has been created successfully\n",
-			history.ReceiptNumber)
-
-	case TopUpTopic:
-		history, err = handlers.InsertTopUpHistory(message)
-		if err != nil {
-			Logger.Println("failed to create topup history: ", err.Error())
-			return
+			utilities.Log.Println("| failed to create deduct transaction history: ", err.Error())
+		} else {
+			utilities.Log.Printf("| deduct transaction history with receipt number %s , has been created successfully\n",
+				history.ReceiptNumber)
 		}
 
-		Logger.Printf("topup transaction history with receipt number %s , has been created successfully\n",
-			history.ReceiptNumber)
+	case topic.TopUpResult:
+		history, err = handler.DoHandleTransaction(message)
+		if err != nil {
+			utilities.Log.Println("| failed to create topup history: ", err.Error())
+		} else {
+			utilities.Log.Printf("| topup transaction history with receipt number %s , has been created successfully\n",
+				history.ReceiptNumber)
+		}
 
 	default:
-		Logger.Println("Unknown topic message")
+		utilities.Log.Println("| Unknown topic message")
 		return
 	}
-
 }

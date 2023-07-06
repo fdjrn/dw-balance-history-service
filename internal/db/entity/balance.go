@@ -49,22 +49,51 @@ type BalanceDeduction struct {
 }
 
 type BalanceHistory struct {
-	ID            string `json:"accountId,omitempty" bson:"_id,omitempty"`
-	UniqueID      string `json:"uniqueId," bson:"uniqueId,omitempty"`
-	TransDate     int64  `json:"transDate" bson:"transDate"`
-	TransCode     string `json:"transCode" bson:"transCode"`
-	Description   string `json:"description" bson:"description"`
-	MerchantID    string `json:"merchantID" bson:"merchantId"`
-	InvoiceNumber string `json:"invoiceNumber" bson:"invoiceNumber"`
-	ReceiptNumber string `json:"receiptNumber" bson:"receiptNumber"`
-	Debit         int    `json:"debit" bson:"debit"`
-	Credit        int    `json:"credit" bson:"credit"`
-	Balance       int64  `json:"balance" bson:"balance"`
-	CreatedAt     int64  `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
-	UpdatedAt     int64  `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
+	ID               string `json:"accountId,omitempty" bson:"_id,omitempty"`
+	UniqueID         string `json:"uniqueId," bson:"uniqueId,omitempty"`
+	TransDate        string `json:"transDate" bson:"transDate"`
+	TransCode        string `json:"transCode" bson:"transCode"`
+	TransType        int    `json:"transType" bson:"transType"`
+	Description      string `json:"description" bson:"description"`
+	PartnerID        string `json:"partnerId" bson:"partnerId"`
+	MerchantID       string `json:"merchantId" bson:"merchantId"`
+	TerminalID       string `json:"terminalId" bson:"terminalId"`
+	TerminalName     string `json:"terminalName" bson:"terminalName"`
+	PartnerRefNumber string `json:"partnerRefNumber" bson:"partnerRefNumber"`
+	ReceiptNumber    string `json:"receiptNumber" bson:"receiptNumber"`
+	Debit            int64  `json:"debit" bson:"debit"`
+	Credit           int64  `json:"credit" bson:"credit"`
+	Balance          int64  `json:"balance" bson:"balance"`
+	CreatedAt        int64  `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
+	UpdatedAt        int64  `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
 }
 
-const (
-	TransCodeTopup  = "1000"
-	TransCodeDeduct = "2000"
-)
+type TransactionItem struct {
+	ID     string `json:"id,omitempty" bson:"_id,omitempty"`
+	Code   string `json:"code,omitempty" bson:"code"`
+	Name   string `json:"name" bson:"name"`
+	Amount int64  `json:"amount" bson:"amount"`
+	Price  int64  `json:"price,omitempty" bson:"price"`
+	Qty    int    `json:"qty,omitempty" bson:"qty"`
+}
+
+type BalanceTransaction struct {
+	ID                   string            `json:"id,omitempty" bson:"_id,omitempty"`
+	TransDate            string            `json:"transDate,omitempty" bson:"transDate"` // YYYYMMDDhhmmss
+	ReferenceNo          string            `json:"referenceNo,omitempty" bson:"referenceNo"`
+	ReceiptNumber        string            `json:"receiptNumber,omitempty" bson:"receiptNumber"`
+	LastBalance          int64             `json:"lastBalance,omitempty" bson:"lastBalance"`
+	LastBalanceEncrypted string            `json:"-" bson:"-"`
+	Status               string            `json:"status,omitempty" bson:"status"`
+	TransType            int               `json:"transType,omitempty" bson:"transType"` // (1) TopUp | (2) Payment | (3) Distribution
+	PartnerTransDate     string            `json:"partnerTransDate" bson:"partnerTransDate"`
+	PartnerRefNumber     string            `json:"partnerRefNumber" bson:"partnerRefNumber"`
+	PartnerID            string            `json:"partnerId" bson:"partnerId"`
+	MerchantID           string            `json:"merchantId" bson:"merchantId"`
+	TerminalID           string            `json:"terminalId" bson:"terminalId"`
+	TerminalName         string            `json:"terminalName" bson:"terminalName"`
+	TotalAmount          int64             `json:"totalAmount" bson:"totalAmount"`
+	Items                []TransactionItem `json:"items" bson:"items"`
+	CreatedAt            int64             `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
+	UpdatedAt            int64             `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
+}

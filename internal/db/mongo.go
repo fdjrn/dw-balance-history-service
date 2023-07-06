@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"github.com/fdjrn/dw-balance-history-service/configs"
+	"github.com/fdjrn/dw-balance-history-service/internal/utilities"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -12,9 +13,6 @@ import (
 )
 
 type MongoCollection struct {
-	//Account           *mongo.Collection
-	//UnregisterAccount *mongo.Collection
-	//BalanceTopup      *mongo.Collection
 	BalanceHistory *mongo.Collection
 }
 
@@ -58,7 +56,7 @@ func (i *MongoInstance) Connect() error {
 		},
 	}
 
-	log.Println("[INIT] database >> connected")
+	utilities.Log.Println("| database >> connected")
 
 	return nil
 }
@@ -70,7 +68,7 @@ func (i *MongoInstance) Disconnect() error {
 
 	err := Mongo.Client.Disconnect(context.TODO())
 	if err != nil {
-		log.Println("error on closing mongodb connection: ", err.Error())
+		log.Println("| error on closing mongodb connection: ", err.Error())
 		return err
 	}
 	return nil

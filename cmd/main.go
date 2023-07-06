@@ -11,11 +11,11 @@ import (
 )
 
 func main() {
+	var err error
+	internal.SetupCloseHandler()
 
 	defer internal.ExitGracefully()
 
-	log.Println(strings.Repeat("_", 40))
-	var err error
 	wg := &sync.WaitGroup{}
 
 	// Config Initialization

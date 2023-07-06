@@ -5,7 +5,8 @@ import (
 	"errors"
 	"github.com/fdjrn/dw-balance-history-service/internal/db"
 	"github.com/fdjrn/dw-balance-history-service/internal/db/entity"
-	"github.com/fdjrn/dw-balance-history-service/pkg/payload"
+	"github.com/fdjrn/dw-balance-history-service/internal/handlers"
+	"github.com/fdjrn/dw-balance-history-service/internal/utilities"
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,32 +16,37 @@ import (
 	"time"
 )
 
-type BalanceHistory struct {
+type BalanceHistoryRepository struct {
+	Entity      *entity.BalanceHistory
+	Transaction *entity.BalanceTransaction
 }
 
-var BalanceHistoryRepository = BalanceHistory{}
+func NewBalanceHistoryRepository() BalanceHistoryRepository {
+	return BalanceHistoryRepository{
+		Entity:      new(entity.BalanceHistory),
+		Transaction: new(entity.BalanceTransaction),
+	}
+}
 
-func (h *BalanceHistory) IsExists(receiptNo string) bool {
+func (h *BalanceHistoryRepository) IsExists(receiptNo string) bool {
 
-	result := new(entity.BalanceHistory)
-
-	err := db.Mongo.Collection.BalanceHistory.FindOne(context.TODO(), bson.D{
-		{"receiptNumber", receiptNo},
-	}).Decode(result)
+	hist := new(entity.BalanceHistory)
+	err := db.Mongo.Collection.BalanceHistory.FindOne(
+		context.TODO(), bson.D{{"receiptNumber", receiptNo}},
+	).Decode(hist)
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return false
 		}
 
-		log.Println(err.Error())
-		return false
+		utilities.Log.Println(err.Error())
 	}
 
 	return true
 }
 
-func (h *BalanceHistory) FindByID(objectId interface{}) (*entity.BalanceHistory, error) {
+func (h *BalanceHistoryRepository) FindByID(objectId interface{}) (*entity.BalanceHistory, error) {
 	result := new(entity.BalanceHistory)
 	err := db.Mongo.Collection.BalanceHistory.FindOne(context.TODO(), bson.D{
 		{"_id", objectId},
@@ -61,7 +67,7 @@ out-params:
 	insertedID: interface{},
 	err: error
 */
-func (h *BalanceHistory) InsertBalanceHistory(history *entity.BalanceHistory) (int, interface{}, error) {
+func (h *BalanceHistoryRepository) InsertBalanceHistory(history *entity.BalanceHistory) (int, interface{}, error) {
 
 	result, err := db.Mongo.Collection.BalanceHistory.InsertOne(context.TODO(), history)
 	if err != nil {
@@ -69,6 +75,16 @@ func (h *BalanceHistory) InsertBalanceHistory(history *entity.BalanceHistory) (i
 	}
 
 	return fiber.StatusCreated, result.InsertedID, nil
+}
+
+func (h *BalanceHistoryRepository) Create() (interface{}, error) {
+
+	result, err := db.Mongo.Collection.BalanceHistory.InsertOne(context.TODO(), h.Entity)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.InsertedID, nil
 }
 
 /*
@@ -80,7 +96,7 @@ out-params:
 	length: int,
 	err: error
 */
-func (h *BalanceHistory) FindByLastTransaction(r *payload.HistoryRequest) (int, interface{}, int, error) {
+func (h *BalanceHistoryRepository) FindByLastTransaction(r *handlers.HistoryRequest) (int, interface{}, int, error) {
 
 	filter := bson.D{{"uniqueId", r.UID}}
 	opt := options.Find().SetSort(bson.D{{"_id", -1}}).SetLimit(r.Limit)
@@ -107,7 +123,7 @@ out-params:
 	length: int,
 	err: error
 */
-func (h *BalanceHistory) FindByPeriod(r *payload.HistoryRequest) (int, interface{}, int, error) {
+func (h *BalanceHistoryRepository) FindByPeriod(r *handlers.HistoryRequest) (int, interface{}, int, error) {
 
 	// 1. add fields
 	addFieldStage := bson.D{
@@ -166,7 +182,7 @@ return:
 	totalPages int,
 	err error
 */
-func (h *BalanceHistory) FindAllPaginated(r *payload.HistoryRequestPaginated) (int, interface{}, int64, int64, error) {
+func (h *BalanceHistoryRepository) FindAllPaginated(r *handlers.HistoryRequestPaginated) (int, interface{}, int64, int64, error) {
 
 	filter := bson.D{{"uniqueId", r.UID}}
 	skipValue := (r.Page - 1) * r.Size
