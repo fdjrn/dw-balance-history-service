@@ -41,7 +41,14 @@ func (h *TransactionHandler) DoHandleTransaction(message *sarama.ConsumerMessage
 	h.repository.Entity.ID = ""
 
 	td, err := time.Parse("20060102150405", data.TransDate)
-	h.repository.Entity.TransDate = td.Format("2006-01-02 15:04:05")
+	if err != nil {
+		utilities.Log.Println("invalid transDate value.")
+		h.repository.Entity.TransDate = "0000-00-00 00:00:00"
+		h.repository.Entity.TransDateNumeric = 0
+	} else {
+		h.repository.Entity.TransDate = td.Format("2006-01-02 15:04:05")
+		h.repository.Entity.TransDateNumeric = td.UnixMilli()
+	}
 
 	h.repository.Entity.TransType = data.TransType
 	h.repository.Entity.Description = data.Items[0].Name

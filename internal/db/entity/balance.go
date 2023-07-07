@@ -50,7 +50,8 @@ type BalanceDeduction struct {
 
 type BalanceHistory struct {
 	ID               string `json:"accountId,omitempty" bson:"_id,omitempty"`
-	TransDate        string `json:"transDate" bson:"transDate"`
+	TransDate        string `json:"transDate" bson:"transDate"`                         // YYYY-MM-DD hh:mm:ss
+	TransDateNumeric int64  `json:"transDateNumeric,omitempty" bson:"transDateNumeric"` // unix time millis
 	TransCode        string `json:"transCode" bson:"transCode"`
 	TransType        int    `json:"transType" bson:"transType"`
 	Description      string `json:"description" bson:"description"`
@@ -78,7 +79,8 @@ type TransactionItem struct {
 
 type BalanceTransaction struct {
 	ID                   string            `json:"id,omitempty" bson:"_id,omitempty"`
-	TransDate            string            `json:"transDate,omitempty" bson:"transDate"` // YYYYMMDDhhmmss
+	TransDate            string            `json:"transDate,omitempty" bson:"transDate"`               // YYYY-MM-DD hh:mm:ss
+	TransDateNumeric     int64             `json:"transDateNumeric,omitempty" bson:"transDateNumeric"` // unix time millis
 	ReferenceNo          string            `json:"referenceNo,omitempty" bson:"referenceNo"`
 	ReceiptNumber        string            `json:"receiptNumber,omitempty" bson:"receiptNumber"`
 	LastBalance          int64             `json:"lastBalance,omitempty" bson:"lastBalance"`
