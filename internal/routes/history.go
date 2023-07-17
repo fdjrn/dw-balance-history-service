@@ -14,11 +14,11 @@ func initBalanceHistoryRoutes(router fiber.Router) {
 	})
 
 	historyRoute.Post("/all", func(c *fiber.Ctx) error {
-		return historyHandler.GetBalanceHistories(c)
+		return historyHandler.GetBalanceHistories(c, false)
 	})
 
 	historyRoute.Post("/periods", func(c *fiber.Ctx) error {
-		return historyHandler.GetBalanceHistories(c)
+		return historyHandler.GetBalanceHistories(c, true)
 	})
 
 }

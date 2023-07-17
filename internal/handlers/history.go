@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"fmt"
 	"github.com/fdjrn/dw-balance-history-service/internal/db/entity"
 	"github.com/fdjrn/dw-balance-history-service/internal/db/repository"
 	"github.com/fdjrn/dw-balance-history-service/internal/handlers/validator"
 	"github.com/gofiber/fiber/v2"
+	"time"
 )
 
 type BalanceHistoryHandler struct {
@@ -27,7 +29,7 @@ func (b *BalanceHistoryHandler) isValidLimit(i int64) bool {
 	return false
 }
 
-func (b *BalanceHistoryHandler) GetBalanceHistories(c *fiber.Ctx) error {
+func (b *BalanceHistoryHandler) GetBalanceHistories(c *fiber.Ctx, isPeriod bool) error {
 
 	var payload = new(entity.PaginatedRequest)
 
@@ -58,6 +60,52 @@ func (b *BalanceHistoryHandler) GetBalanceHistories(c *fiber.Ctx) error {
 
 	if payload.Size == 0 {
 		payload.Size = 10
+	}
+
+	// for periods endpoint
+	if isPeriod {
+		if payload.Periods == nil {
+			return c.Status(400).JSON(entity.Responses{
+				Success: false,
+				Message: "periods attributes cannot be empty",
+				Data:    nil,
+			})
+		}
+
+		payload.Periods.StartDate, err = time.ParseInLocation(
+			"20060102150405",
+			fmt.Sprintf("%s%s", payload.Periods.Start, "000000"),
+			time.Now().Location(),
+		)
+		if err != nil {
+			return c.Status(400).JSON(entity.Responses{
+				Success: false,
+				Message: "invalid start periods",
+				Data:    nil,
+			})
+		}
+
+		payload.Periods.EndDate, err = time.ParseInLocation(
+			"20060102150405",
+			fmt.Sprintf("%s%s", payload.Periods.End, "235959"),
+			time.Now().Location(),
+		)
+
+		if err != nil {
+			return c.Status(400).JSON(entity.Responses{
+				Success: false,
+				Message: "invalid end periods",
+				Data:    nil,
+			})
+		}
+
+		if payload.Periods.EndDate.Before(payload.Periods.StartDate) {
+			return c.Status(400).JSON(entity.Responses{
+				Success: false,
+				Message: "end period cannot be less than start period",
+				Data:    nil,
+			})
+		}
 	}
 
 	b.repository.Request = payload

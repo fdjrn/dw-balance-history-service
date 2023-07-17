@@ -91,51 +91,6 @@ func (h *BalanceHistoryRepository) FindByLastTransaction() (interface{}, int, er
 	return histories, len(histories), nil
 }
 
-//func (h *BalanceHistoryRepository) FindByPeriod(r *handlers.HistoryRequest) (int, interface{}, int, error) {
-//
-//	// 1. add fields
-//	addFieldStage := bson.D{
-//		{"$addFields", bson.D{
-//			{"year", bson.D{{"$year", bson.D{{"$toDate", "$transDate"}}}}},
-//			{"month", bson.D{{"$month", bson.D{{"$toDate", "$transDate"}}}}},
-//		}},
-//	}
-//	// 2. match Stages
-//	matchStage := bson.D{
-//		{"$match", bson.D{
-//			{"year", r.Period.Year},
-//			{"month", r.Period.Month},
-//		}},
-//	}
-//
-//	cursor, err := db.Mongo.Collection.BalanceHistory.Aggregate(
-//		context.TODO(),
-//		mongo.Pipeline{
-//			bson.D{{"$match", bson.D{{"uniqueId", r.UID}}}},
-//			bson.D{{"$sort", bson.D{{"_id", -1}}}},
-//			addFieldStage,
-//			matchStage,
-//		})
-//
-//	if err != nil {
-//		return fiber.StatusInternalServerError, nil, 0, err
-//	}
-//
-//	var histories []entity.BalanceHistory
-//	for cursor.Next(context.TODO()) {
-//		var item entity.BalanceHistory
-//		err2 := cursor.Decode(&item)
-//		if err2 != nil {
-//			log.Println("error found on decoding cursor: ", err2.Error())
-//			continue
-//		}
-//
-//		histories = append(histories, item)
-//	}
-//
-//	return fiber.StatusOK, histories, len(histories), nil
-//}
-
 func (h *BalanceHistoryRepository) FindAllPaginated() (interface{}, int64, int64, error) {
 	filter := bson.D{}
 
@@ -144,6 +99,15 @@ func (h *BalanceHistoryRepository) FindAllPaginated() (interface{}, int64, int64
 		{"merchantId", h.Request.MerchantID},
 		{"terminalId", h.Request.TerminalID},
 	}...)
+
+	if h.Request.Periods != nil {
+		filter = append(filter, bson.D{
+			{"transDateNumeric", bson.D{
+				{"$gte", h.Request.Periods.StartDate.UnixMilli()},
+				{"$lte", h.Request.Periods.EndDate.UnixMilli()},
+			}},
+		}...)
+	}
 
 	skipValue := (h.Request.Page - 1) * h.Request.Size
 
