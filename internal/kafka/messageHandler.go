@@ -24,7 +24,9 @@ func HandleMessages(message *sarama.ConsumerMessage) {
 	case topic.TopUpResult:
 		transType = "topup"
 	case topic.DistributionResult:
-		transType = "balance distribution"
+		transType = "merchant"
+	case topic.DistributionResultMembers:
+		transType = "member"
 	default:
 		utilities.Log.Println("| Unknown topic message")
 		return
