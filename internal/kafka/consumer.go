@@ -4,12 +4,8 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	"github.com/fdjrn/dw-balance-history-service/configs"
-	"github.com/fdjrn/dw-balance-history-service/internal/db/entity"
-	"github.com/fdjrn/dw-balance-history-service/internal/handlers/consumer"
-	"github.com/fdjrn/dw-balance-history-service/internal/kafka/topic"
 	"github.com/fdjrn/dw-balance-history-service/internal/utilities"
 	"log"
-	//"os"
 	"strings"
 	"sync"
 )
@@ -17,13 +13,6 @@ import (
 type MessageConsumer struct {
 	ready chan bool
 }
-
-//var Logger = log.New(os.Stdout, "[CONSUMER] ", log.LstdFlags)
-//
-//const (
-//	DeductTopic = "mdw.transaction.deduct.created"
-//	TopUpTopic  = "mdw.transaction.topup.created"
-//)
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 func (consumer *MessageConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
@@ -130,38 +119,4 @@ func StartConsumer() {
 
 	utilities.Log.Println("| consumer >> up and running!...")
 	wg.Done()
-}
-
-func HandleMessages(message *sarama.ConsumerMessage) {
-	var (
-		handler = consumer.NewTransactionHandler()
-		history = new(entity.BalanceHistory)
-		err     error
-	)
-
-	utilities.Log.SetPrefix("[CONSUMER] ")
-
-	switch message.Topic {
-	case topic.DeductResult:
-		history, err = handler.DoHandleTransaction(message)
-		if err != nil {
-			utilities.Log.Println("| failed to create deduct transaction history: ", err.Error())
-		} else {
-			utilities.Log.Printf("| deduct transaction history with receipt number %s , has been created successfully\n",
-				history.ReceiptNumber)
-		}
-
-	case topic.TopUpResult:
-		history, err = handler.DoHandleTransaction(message)
-		if err != nil {
-			utilities.Log.Println("| failed to create topup history: ", err.Error())
-		} else {
-			utilities.Log.Printf("| topup transaction history with receipt number %s , has been created successfully\n",
-				history.ReceiptNumber)
-		}
-
-	default:
-		utilities.Log.Println("| Unknown topic message")
-		return
-	}
 }

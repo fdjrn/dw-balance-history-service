@@ -65,9 +65,13 @@ func (h *TransactionHandler) DoHandleTransaction(message *sarama.ConsumerMessage
 		h.repository.Entity.Debit = 0
 		h.repository.Entity.Credit = data.TotalAmount
 	case utilities.TransTypePayment:
-		h.repository.Entity.TransCode = utilities.TransCodeDeduct
+		h.repository.Entity.TransCode = utilities.TransCodePayment
 		h.repository.Entity.Debit = data.TotalAmount
 		h.repository.Entity.Credit = 0
+	case utilities.TransTypeDistribution:
+		h.repository.Entity.TransCode = utilities.TransCodeDistribution
+		h.repository.Entity.Debit = 0
+		h.repository.Entity.Credit = data.TotalAmount
 	default:
 		return nil, errors.New("| unknown transType value. transaction cannot be processed")
 	}
