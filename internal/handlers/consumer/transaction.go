@@ -7,6 +7,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/fdjrn/dw-balance-history-service/internal/db/entity"
 	"github.com/fdjrn/dw-balance-history-service/internal/db/repository"
+	"github.com/fdjrn/dw-balance-history-service/internal/kafka/topic"
 	"github.com/fdjrn/dw-balance-history-service/internal/utilities"
 	"time"
 )
@@ -70,8 +71,13 @@ func (h *TransactionHandler) DoHandleTransaction(message *sarama.ConsumerMessage
 		h.repository.Entity.Credit = 0
 	case utilities.TransTypeDistribution:
 		h.repository.Entity.TransCode = utilities.TransCodeDistribution
-		h.repository.Entity.Debit = 0
-		h.repository.Entity.Credit = data.TotalAmount
+		if message.Topic == topic.DistributionResultMembers {
+			h.repository.Entity.Debit = 0
+			h.repository.Entity.Credit = data.TotalAmount
+		} else {
+			h.repository.Entity.Debit = data.TotalAmount
+			h.repository.Entity.Credit = 0
+		}
 	default:
 		return nil, errors.New("| unknown transType value. transaction cannot be processed")
 	}
