@@ -41,7 +41,8 @@ func (h *TransactionHandler) DoHandleTransaction(message *sarama.ConsumerMessage
 	// populate transaction data
 	h.repository.Entity.ID = ""
 
-	td, err := time.Parse("20060102150405", data.TransDate)
+	// td, err := time.Parse("20060102150405", data.TransDate)
+	td, err := time.ParseInLocation("20060102150405", data.TransDate, time.Now().Location())
 	if err != nil {
 		utilities.Log.Println("invalid transDate value.")
 		h.repository.Entity.TransDate = "0000-00-00 00:00:00"
